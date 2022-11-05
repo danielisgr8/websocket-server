@@ -1,0 +1,15 @@
+{
+  "name": "@danielisgr8/websocket-server",
+  "version": "0.1.0",
+  "description": "TypeScript WebSocket server",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "websocket",
+    "typescript"
+  ],
+  "author": "Daniel Schubert <me@danielschubert.dev> (https://danielschubert.dev)",
+  "license": "MIT"
+}
