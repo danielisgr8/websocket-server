@@ -9,6 +9,8 @@ interface EventHandler {
   (id: number, data: any): void
 }
 
+// TODO: Consider a low-coupling way to handle reconnects
+// TODO: Replace console.log usage with an optional log callback
 class WebSocketServer {
   // FIXME: Set through a setter method or constructor instead
   public onClose: ((id: number) => void) | undefined;
@@ -32,9 +34,17 @@ class WebSocketServer {
       this.clients[id] = ws;
 
       ws.on('message', (message) => {
-        // FIXME: According to ws types, `message` will never be of type string
-        if (typeof message === 'string') this.handleEvent(id, message);
-        else throw new Error(`Message of unexpected type ${typeof message}: ${message}`);
+        let stringMessage = '';
+        if (message instanceof Buffer) {
+          stringMessage = message.toString();
+        } else if (message instanceof ArrayBuffer) {
+          stringMessage = new TextDecoder().decode(message);
+        } else {
+          message.forEach((buffer) => {
+            stringMessage += buffer.toString();
+          });
+        }
+        this.handleEvent(id, stringMessage);
       });
 
       ws.on('close', () => {
