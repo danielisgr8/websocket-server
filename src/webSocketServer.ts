@@ -49,19 +49,9 @@ class WebSocketServer {
 
       ws.on('close', () => {
         if (this.onClose) this.onClose(id);
+        delete this.clients[id];
       });
     });
-  }
-
-  /** Clears all event handlers and clients */
-  public reset(): void {
-    // TODO: Look into why this deletes keys instead of setting `this.events` to a new object
-    Object.keys(this.events).forEach((key) => {
-      delete this.events[key];
-    });
-    Object.values(this.clients).forEach((client) => client.terminate());
-    this.clients = {};
-    this.clientCount = 0;
   }
 
   public addEventHandler(eventName: string, callback: EventHandler): void {
