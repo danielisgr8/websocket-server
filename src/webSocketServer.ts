@@ -49,7 +49,6 @@ class WebSocketServer {
 
       ws.on('close', () => {
         if (this.onClose) this.onClose(id);
-        delete this.clients[id];
       });
     });
   }
