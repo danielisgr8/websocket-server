@@ -4,6 +4,11 @@ import WebSocketServer from '../webSocketServer';
 jest.mock('ws');
 
 describe('WebSocketServer', () => {
+  const exampleEventName = 'testEvent';
+  const exampleMessageObject = { event: exampleEventName, data: 'Data sent by the WebSocket' };
+  const exampleMessageString = JSON.stringify(exampleMessageObject);
+  const exampleMessageBuffer = Buffer.from(exampleMessageString);
+
   const expectedWebSocketId = 0;
 
   let wsServer: WebSocket.Server;
@@ -48,15 +53,11 @@ describe('WebSocketServer', () => {
   });
 
   describe('WebSocket message event handler', () => {
-    const eventName = 'testEvent';
-    const messageObject = { event: eventName, data: 'Data sent by the WebSocket' };
-    const messageRaw = JSON.stringify(messageObject);
-
     let callback: jest.Mock;
 
     beforeEach(() => {
       callback = jest.fn();
-      webSocketServer.addEventHandler(eventName, callback);
+      webSocketServer.addEventHandler(exampleEventName, callback);
     });
 
     /**
@@ -65,45 +66,62 @@ describe('WebSocketServer', () => {
     const runTest = (data: WebSocket.RawData) => {
       wsMessageCallback(data);
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(expectedWebSocketId, messageObject.data);
+      expect(callback).toHaveBeenCalledWith(expectedWebSocketId, exampleMessageObject.data);
     };
 
     test('handles Buffer data', () => {
-      runTest(Buffer.from(messageRaw));
+      runTest(exampleMessageBuffer);
     });
 
     test('handles ArrayBuffer data', () => {
-      const typedArray = new Uint8Array(messageRaw.split('').map((char) => char.charCodeAt(0)));
+      const typedArray = new Uint8Array(exampleMessageString.split('').map((char) => char.charCodeAt(0)));
       runTest(typedArray.buffer);
     });
 
     test('handles Buffer array data', () => {
-      const splitPoint = Math.floor(messageRaw.length / 2);
-      const buffer1 = Buffer.from(messageRaw.slice(0, splitPoint));
-      const buffer2 = Buffer.from(messageRaw.slice(splitPoint));
+      const splitPoint = Math.floor(exampleMessageString.length / 2);
+      const buffer1 = Buffer.from(exampleMessageString.slice(0, splitPoint));
+      const buffer2 = Buffer.from(exampleMessageString.slice(splitPoint));
       runTest([buffer1, buffer2]);
     });
   });
 
   test('can add multiple event handlers', () => {
-    const eventName = 'testEvent';
-    const messageObject = { event: eventName, data: 123 };
     const callback1 = jest.fn();
     const callback2 = jest.fn();
-    webSocketServer.addEventHandler(eventName, callback1);
-    webSocketServer.addEventHandler(eventName, callback2);
+    webSocketServer.addEventHandler(exampleEventName, callback1);
+    webSocketServer.addEventHandler(exampleEventName, callback2);
 
-    wsMessageCallback(Buffer.from(JSON.stringify(messageObject)));
+    wsMessageCallback(exampleMessageBuffer);
 
     [callback1, callback2].forEach((callback) => {
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(expectedWebSocketId, messageObject.data);
+      expect(callback).toHaveBeenCalledWith(expectedWebSocketId, exampleMessageObject.data);
     });
   });
 
   describe('removeEventHandler', () => {
-    test.todo('can remove a single event handler');
-    test.todo('noop when handler does not exist');
+    test('can remove a single event handler', () => {
+      const callback1 = jest.fn();
+      const callback2 = jest.fn();
+      webSocketServer.addEventHandler(exampleEventName, callback1);
+      webSocketServer.addEventHandler(exampleEventName, callback2);
+
+      webSocketServer.removeEventHandler(exampleEventName, callback1);
+      wsMessageCallback(exampleMessageBuffer);
+
+      expect(callback1).not.toHaveBeenCalled();
+      expect(callback2).toHaveBeenCalledTimes(1);
+    });
+
+    test('noop when handler does not exist', () => {
+      const callback = jest.fn();
+      webSocketServer.removeEventHandler(exampleEventName, callback);
+
+      wsMessageCallback(exampleMessageBuffer);
+
+      expect(callback).not.toHaveBeenCalled();
+    });
   });
 
   describe('sendMessage', () => {
