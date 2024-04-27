@@ -125,8 +125,40 @@ describe('WebSocketServer', () => {
   });
 
   describe('sendMessage', () => {
-    test.todo('sends the message if the WebSocket connection is open');
-    test.todo('does not send the message if the WebSocket connection is not open');
-    test.todo('throws an error if a nonexistent ID is provided');
+    test('sends the message if the WebSocket connection is open', () => {
+      // Casting needed because 'readyState' is readonly
+      (webSocket.readyState as WebSocket['readyState']) = WebSocket.OPEN;
+      webSocketServer.sendMessage(expectedWebSocketId, exampleEventName, exampleMessageObject.data);
+      expect(jest.mocked(webSocket).send).toHaveBeenCalledTimes(1);
+      expect(jest.mocked(webSocket).send).toHaveBeenCalledWith(exampleMessageString);
+    });
+
+    // A key, K, of T where T[K] is of type V
+    type KeyOfType<T, V> = keyof {
+      [K in keyof T as T[K] extends V ? K : never]: any
+    };
+
+    // A key, K, of T with type T[K], but cannot be K itself
+    type KeyOfTypeExcludingSelf<T, K extends keyof T> = KeyOfType<Omit<T, K>, T[K]>;
+
+    const runNotOpenTest = (statusProperty: KeyOfTypeExcludingSelf<WebSocket, 'readyState'>) => {
+      test(`does not send the message if the WebSocket is not open (status ${statusProperty})`, () => {
+        (webSocket.readyState as WebSocket['readyState']) = WebSocket[statusProperty];
+        webSocketServer
+          .sendMessage(expectedWebSocketId, exampleEventName, exampleMessageObject.data);
+        expect(jest.mocked(webSocket).send).not.toHaveBeenCalled();
+      });
+    };
+
+    runNotOpenTest('CONNECTING');
+    runNotOpenTest('CLOSING');
+    runNotOpenTest('CLOSED');
+
+    test('throws an error if a nonexistent ID is provided', () => {
+      expect(() => {
+        webSocketServer
+          .sendMessage(expectedWebSocketId + 1, exampleEventName, exampleMessageObject.data);
+      }).toThrow();
+    });
   });
 });
